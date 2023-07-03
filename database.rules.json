@@ -4,9 +4,17 @@
       "$user_id":{
         ".read":"$user_id===auth.uid",
         ".write":"$user_id===auth.uid"
-      }
+      }    
     },
-    ".read": false,
-    ".write": false
+      "rooms":{
+        ".read":"auth != null",
+        ".write":"auth != null",
+      "$room_id":{
+        ".read":"auth != null",
+        ".write":"auth != null"
+      }     
+    },
+    ".read": "auth != null",
+    ".write": "auth != null"
   }
 }
