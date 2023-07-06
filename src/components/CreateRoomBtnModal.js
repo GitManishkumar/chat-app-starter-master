@@ -11,7 +11,7 @@ import {
   Alert,
 } from 'rsuite';
 import { useModalState } from '../misc/custom-hooks';
-import {database} from '../misc/firebase'
+import {database, auth} from '../misc/firebase'
 import firebase from 'firebase/app';
 
 const { StringType } = Schema.Types;
@@ -45,7 +45,10 @@ setIsLoading(true)
 
 const newRoomdata={
   ...formValue,
-  createdAt:firebase.database.ServerValue.TIMESTAMP
+  createdAt:firebase.database.ServerValue.TIMESTAMP,
+  admin:{
+    [auth.currentUser.uid]:true
+  }
 }
 
 try {

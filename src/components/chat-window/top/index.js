@@ -1,4 +1,4 @@
-import React, {memo} from 'react';
+import React, { memo } from 'react';
 import { Icon, ButtonToolbar } from 'rsuite';
 import { Link } from 'react-router-dom';
 import { useCurrentRoom } from '../../../context/current-room.context';
@@ -7,14 +7,13 @@ import RoomInfoBtnModal from './RoomInfoBtnModal';
 import EditRoomBtnDrawer from './EditRoomBtnDrawer';
 
 const Top = () => {
+  const name = useCurrentRoom(v => v.name);
+  const isAdmin = useCurrentRoom(v => v.isAdmin);
+  const isMobile = useMediaQuery('(max-width: 992px)');
 
-const name=useCurrentRoom(v=>v.name)
-const isMobile = useMediaQuery('(max-width: 992px)');
-
-
-  return <div>
-
-<div className="d-flex justify-content-between align-items-center">
+  return (
+    <div>
+      <div className="d-flex justify-content-between align-items-center">
         <h4 className="text-disappear d-flex align-items-center">
           <Icon
             componentClass={Link}
@@ -31,16 +30,16 @@ const isMobile = useMediaQuery('(max-width: 992px)');
         </h4>
 
         <ButtonToolbar className="ws-nowrap">
-          <EditRoomBtnDrawer/>
-          </ButtonToolbar>
+          {isAdmin && <EditRoomBtnDrawer />}
+        </ButtonToolbar>
       </div>
 
       <div className="d-flex justify-content-between align-items-center">
         <span>todo</span>
         <RoomInfoBtnModal />
       </div>
-
-  </div>;
+    </div>
+  );
 };
 
 export default memo(Top);
