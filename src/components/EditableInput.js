@@ -7,6 +7,7 @@ const EditableInput = ({
   label = null,
   placeholder = 'write your value',
   emptyMsg = 'Input is empty',
+  wrapperClassName="",
   ...inputProps
 }) => {
   const [input, setInput] = useState(initialVlaue);
@@ -35,7 +36,7 @@ const onSaveClick=async()=>{
 
 
   return (
-   <div>
+   <div className={wrapperClassName}>
     {label}
     <InputGroup>
     <Input
