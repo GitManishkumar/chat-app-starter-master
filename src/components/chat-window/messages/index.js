@@ -1,32 +1,77 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom/cjs/react-router-dom.min';
 import { database, storage } from '../../../misc/firebase';
 import { groupBy, transformToArrWithId } from '../../../misc/helpers';
 import MessageItem from './MessageItem';
-import { Alert } from 'rsuite';
+import { Alert, Button } from 'rsuite';
 import { auth } from '../../../misc/firebase';
+
+const PAGE_SIZE = 15;
+const messagesRef = database.ref('/messages');
+
+const shouldScrollToBottom=(node, threshold=30)=>{
+  const percentage=(100*node.scrollTop)/(node.scrollHeight-node.clientHeight)||0
+  return percentage>threshold
+}
 
 const Messages = () => {
   const { chatId } = useParams();
   const [messages, setMessages] = useState(null);
+  const [limit, setLimit] = useState(PAGE_SIZE);
+  const selfRef = useRef();
 
   const isChatEmpty = messages && messages.length === 0;
   const canShowMessages = messages && messages.length > 0;
 
+  const loadMessages = useCallback(
+    limitToLast => {
+      const node=selfRef.current
+      messagesRef.off();
+
+      messagesRef
+        .orderByChild('roomId')
+        .equalTo(chatId)
+        .limitToLast(limitToLast || PAGE_SIZE)
+        .on('value', snap => {
+          const data = transformToArrWithId(snap.val());
+          setMessages(data);
+
+if(shouldScrollToBottom(node)){
+  node.scrollTop=node.scrollHeight
+}
+
+        });
+      setLimit(p => p + PAGE_SIZE);
+    },
+    [chatId]
+  );
+
+  const onLoadMore = useCallback(() => {
+    const node = selfRef.current;
+    const oldHeight = node.scrollHeight;
+
+    loadMessages(limit);
+
+    setTimeout(() => {
+      const newHeight = node.scrollHeight;
+
+      node.scrollTop = newHeight - oldHeight;
+    }, 200);
+  }, [loadMessages, limit]);
+
   useEffect(() => {
-    const messagesRef = database.ref('/messages');
-    messagesRef
-      .orderByChild('roomId')
-      .equalTo(chatId)
-      .on('value', snap => {
-        const data = transformToArrWithId(snap.val());
-        setMessages(data);
-      });
+    const node = selfRef.current;
+
+    loadMessages();
+
+    setTimeout(() => {
+      node.scrollTop = node.scrollHeight;
+    }, 200);
 
     return () => {
       messagesRef.off('value');
     };
-  }, [chatId]);
+  }, [loadMessages]);
 
   const handleAdmin = useCallback(
     async uid => {
@@ -121,31 +166,42 @@ const Messages = () => {
     [chatId, messages]
   );
 
-const renderMessages=()=>{
-  const groups=groupBy(messages, item=>
-    new Date(item.createdAt).toDateString()
-  )
+  const renderMessages = () => {
+    const groups = groupBy(messages, item =>
+      new Date(item.createdAt).toDateString()
+    );
 
-const items=[]
-Object.keys(groups).forEach((date)=>{
-  items.push(<li key={date} className="text-center mb-1 padded">{date}</li>)
-  const msgs=groups[date].map(msg=>(
-      <MessageItem
-        key={msg.id}
-        message={msg}
-        handleAdmin={handleAdmin}
-        handleLike={handleLike}
-        handleDelete={handleDelete}
-      />
-  ))
-  items.push(...msgs)
-  // items.concat(msgs)
-})
-return items
-}
+    const items = [];
+    Object.keys(groups).forEach(date => {
+      items.push(
+        <li key={date} className="text-center mb-1 padded">
+          {date}
+        </li>
+      );
+      const msgs = groups[date].map(msg => (
+        <MessageItem
+          key={msg.id}
+          message={msg}
+          handleAdmin={handleAdmin}
+          handleLike={handleLike}
+          handleDelete={handleDelete}
+        />
+      ));
+      items.push(...msgs);
+      // items.concat(msgs)
+    });
+    return items;
+  };
 
   return (
-    <ul className="msg-list custom-scroll">
+    <ul ref={selfRef} className="msg-list custom-scroll">
+      {messages && messages.length >= PAGE_SIZE && (
+        <li className="text-center mt-2 mb-2">
+          <Button onClick={onLoadMore} color="green">
+            Load more
+          </Button>
+        </li>
+      )}
       {isChatEmpty && <li>No messages yet</li>}
       {canShowMessages && renderMessages()}
     </ul>
