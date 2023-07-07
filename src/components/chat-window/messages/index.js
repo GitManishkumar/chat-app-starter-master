@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom/cjs/react-router-dom.min';
-import { database } from '../../../misc/firebase';
+import { database, storage } from '../../../misc/firebase';
 import { transformToArrWithId } from '../../../misc/helpers';
 import MessageItem from './MessageItem';
 import { Alert } from 'rsuite';
@@ -79,35 +79,47 @@ const Messages = () => {
     Alert.info(alertMsg, 4000);
   }, []);
 
-  const handleDelete = useCallback(async(msgId) => {
-    if (!window.confirm('Delete this message?')) {
-      return;
-    }
+  const handleDelete = useCallback(
+    async (msgId, file) => {
+      if (!window.confirm('Delete this message?')) {
+        return;
+      }
 
-    const isLast = (messages[messages.length - 1].id = msgId);
+      const isLast = (messages[messages.length - 1].id = msgId);
 
-    const updates = {};
+      const updates = {};
 
-    updates[`/messages/${msgId}`] = null;
+      updates[`/messages/${msgId}`] = null;
 
-    if (isLast && messages.length > 1) {
-      updates[`rooms/${chatId}/lastMessage`] = {
-        ...messages[messages.length - 2],
-        msgId: messages[messages.length - 2].id,
-      };
-    }
+      if (isLast && messages.length > 1) {
+        updates[`rooms/${chatId}/lastMessage`] = {
+          ...messages[messages.length - 2],
+          msgId: messages[messages.length - 2].id,
+        };
+      }
 
-    if (isLast && messages.length == 1) {
-      updates[`rooms/${chatId}/lastMessage`] = null;
-    }
+      if (isLast && messages.length == 1) {
+        updates[`rooms/${chatId}/lastMessage`] = null;
+      }
 
-    try {
-      await database.ref().update(updates)
-      Alert.info('Message has been deleted')
-    } catch (err) {
-      Alert.error(err.message)
-    }
-  }, [chatId, messages]);
+      try {
+        await database.ref().update(updates);
+        Alert.info('Message has been deleted');
+      } catch (err) {
+        return Alert.error(err.message);
+      }
+
+      if (file) {
+        try {
+          const fileRef = storage.refFromURL(file.url);
+          await fileRef.delete();
+        } catch (err) {
+          Alert.error(err.message);
+        }
+      }
+    },
+    [chatId, messages]
+  );
 
   return (
     <ul className="msg-list custom-scroll">
